@@ -3,7 +3,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import plantingRoutes from './routes/plantingRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 import { prisma } from './lib/prisma.js';
 import {
   generalLimiter,
@@ -43,9 +45,10 @@ app.use(cors({
 // Rate limiting
 app.use(generalLimiter);
 
-// Body parsing
+// Body parsing y cookies
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
 // Logging
 if (process.env.NODE_ENV === 'development') {
@@ -63,8 +66,9 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API Routes con rate limiting estricto para operaciones de escritura
-app.use('/api', strictLimiter);
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api', strictLimiter); // Rate limiting estricto para plantings
 app.use('/api', plantingRoutes);
 
 // Error handler global

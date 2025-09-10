@@ -12,13 +12,24 @@ import {
   validateIdParam,
   validateQueryParams
 } from '../middleware/validation.js';
+import { optionalAuth, authMiddleware, requireRole } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.post('/plantings', validateCreatePlanting, createPlanting);        // Crear un nuevo registro de siembra
-router.get('/plantings', validateQueryParams, getPlantings);              // Obtener todos los registros de siembra
-router.get('/plantings/:id', validateIdParam, getPlantingById);           // Obtener un registro específico
-router.put('/plantings/:id', validateUpdatePlanting, updatePlanting);     // Actualizar un registro de siembra
-router.delete('/plantings/:id', validateIdParam, deletePlanting);         // Eliminar un registro de siembra
+// Usar autenticación opcional para GET (funciona con o sin auth)
+router.get('/plantings', optionalAuth, validateQueryParams, getPlantings);       
+router.get('/plantings/:id', optionalAuth, validateIdParam, getPlantingById);    
+
+// Usar autenticación opcional para POST (permite desarrollo sin auth)
+router.post('/plantings', optionalAuth, validateCreatePlanting, createPlanting);
+
+// Usar autenticación opcional para PUT/DELETE (permite desarrollo sin auth)
+router.put('/plantings/:id', optionalAuth, validateUpdatePlanting, updatePlanting);
+router.delete('/plantings/:id', optionalAuth, validateIdParam, deletePlanting);
+
+// TODO: Cuando esté listo para producción, cambiar optionalAuth por authMiddleware
+// router.post('/plantings', authMiddleware, validateCreatePlanting, createPlanting);
+// router.put('/plantings/:id', authMiddleware, validateUpdatePlanting, updatePlanting);
+// router.delete('/plantings/:id', authMiddleware, requireRole('ADMIN', 'GROWER'), validateIdParam, deletePlanting);
 
 export default router;

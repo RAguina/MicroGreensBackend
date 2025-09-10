@@ -13,17 +13,36 @@ export const createPlanting = async (req, res) => {
       notes 
     } = req.body;
     
+    // Obtener userId del token (si está autenticado) o usar null temporalmente
+    const userId = req.user?.userId || null;
+    
+    const plantingData = {
+      plantName,
+      datePlanted: new Date(datePlanted),
+      expectedHarvest: expectedHarvest ? new Date(expectedHarvest) : null,
+      domeDate: domeDate ? new Date(domeDate) : null,
+      lightDate: lightDate ? new Date(lightDate) : null,
+      quantity: quantity ? parseInt(quantity) : null,
+      yield: plantYield ? parseFloat(plantYield) : null,
+      notes: notes || null,
+    };
+
+    // Solo agregar userId si existe
+    if (userId) {
+      plantingData.userId = userId;
+    }
+    
     const newPlanting = await prisma.planting.create({
-      data: {
-        plantName,
-        datePlanted: new Date(datePlanted),
-        expectedHarvest: expectedHarvest ? new Date(expectedHarvest) : null,
-        domeDate: domeDate ? new Date(domeDate) : null,
-        lightDate: lightDate ? new Date(lightDate) : null,
-        quantity: quantity ? parseInt(quantity) : null,
-        yield: plantYield ? parseFloat(plantYield) : null,
-        notes: notes || null,
-      },
+      data: plantingData,
+      include: {
+        user: userId ? {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        } : false
+      }
     });
     
     res.status(201).json(newPlanting);
