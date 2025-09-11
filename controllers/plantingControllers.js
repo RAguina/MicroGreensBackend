@@ -36,11 +36,11 @@ export const createPlanting = async (req, res) => {
     
     // Validate plantType if provided
     if (plantTypeId) {
-      const plantType = await prisma.plantType.findFirst({
-        where: { id: plantTypeId, deletedAt: null }
+      const plantType = await prisma.plantType.findUnique({
+        where: { id: plantTypeId }
       });
       
-      if (!plantType) {
+      if (!plantType || plantType.deletedAt) {
         return res.status(400).json({ error: 'Tipo de planta no válido' });
       }
       
