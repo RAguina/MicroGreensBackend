@@ -16,22 +16,13 @@ export const createPlanting = async (req, res) => {
       trayNumber
     } = req.body;
     
-    // Obtener userId del token o crear/usar usuario por defecto para desarrollo
+    // Obtener userId del token o usar usuario demo hardcodeado para desarrollo
     let userId = req.user?.userId;
     
     if (!userId) {
-      // Para desarrollo: crear o usar usuario por defecto
-      const defaultUser = await prisma.user.upsert({
-        where: { email: 'default@microgreens.dev' },
-        update: {},
-        create: {
-          email: 'default@microgreens.dev',
-          password: 'temp_password_hash',
-          name: 'Usuario de Desarrollo',
-          role: 'GROWER'
-        }
-      });
-      userId = defaultUser.id;
+      // Para desarrollo: usar usuario demo específico
+      // Debe existir en la base de datos (crear con seed_demo_user.sql)
+      userId = 'demo-user-12345678901234567890';
     }
     
     // Validate plantType if provided
@@ -46,10 +37,15 @@ export const createPlanting = async (req, res) => {
       
       // Auto-calculate expectedHarvest if not provided
       if (!expectedHarvest && plantType.daysToHarvest) {
-        const plantedDate = new Date(datePlanted);
-        const expectedDate = new Date(plantedDate);
-        expectedDate.setDate(plantedDate.getDate() + plantType.daysToHarvest);
-        expectedHarvest = expectedDate.toISOString();
+        try {
+          const plantedDate = new Date(datePlanted);
+          const expectedDate = new Date(plantedDate);
+          expectedDate.setDate(plantedDate.getDate() + plantType.daysToHarvest);
+          expectedHarvest = expectedDate.toISOString().split('T')[0]; // Solo fecha, no hora
+        } catch (error) {
+          console.error('Error calculating expectedHarvest:', error);
+          // Continue without auto-calculation
+        }
       }
     }
     
