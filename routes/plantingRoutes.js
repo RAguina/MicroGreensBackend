@@ -17,15 +17,15 @@ import { optionalAuth, authMiddleware, requireRole } from '../middleware/authMid
 const router = express.Router();
 
 // Usar autenticación opcional para GET (funciona con o sin auth)
-router.get('/plantings', optionalAuth, validateQueryParams, getPlantings);       
-router.get('/plantings/:id', optionalAuth, validateIdParam, getPlantingById);    
+router.get('/', optionalAuth, validateQueryParams, getPlantings);       
+router.get('/:id', optionalAuth, validateIdParam, getPlantingById);    
 
 // Usar autenticación opcional para POST (permite desarrollo sin auth)
-router.post('/plantings', optionalAuth, validateCreatePlanting, createPlanting);
+router.post('/', optionalAuth, validateCreatePlanting, createPlanting);
 
 // Usar autenticación opcional para PUT/DELETE (permite desarrollo sin auth)
-router.put('/plantings/:id', optionalAuth, validateUpdatePlanting, updatePlanting);
-router.delete('/plantings/:id', optionalAuth, validateIdParam, deletePlanting);
+router.put('/:id', optionalAuth, validateUpdatePlanting, updatePlanting);
+router.delete('/:id', optionalAuth, validateIdParam, deletePlanting);
 
 // TODO: Cuando esté listo para producción, cambiar optionalAuth por authMiddleware
 // router.post('/plantings', authMiddleware, validateCreatePlanting, createPlanting);

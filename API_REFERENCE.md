@@ -1,12 +1,17 @@
 # 🌱 MicroGreens API - Quick Reference
 
-> **Para integración con frontend** - Documentación esencial de endpoints
+> **Para integración con frontend** - Documentación esencial de endpoints con modelo híbrido escalable
 
 ## 🌐 Base URL
 ```
 Production: [YOUR_VERCEL_URL]
 Development: http://localhost:5001
 ```
+
+## 🆕 **NUEVO: Modelo Híbrido v2.0**
+- **PlantTypes**: Catálogo reutilizable de plantas con parámetros de cultivo
+- **Plantings**: Con estados (PLANTED → HARVESTED) y relación a PlantType
+- **Harvests**: Múltiples cosechas por siembra con métricas de calidad
 
 ## 🔐 Autenticación
 
@@ -102,27 +107,95 @@ const apiCall = async (url, options = {}) => {
 
 ---
 
-## 🌱 Plantings CRUD
+## 🏷️ Plant Types (Catálogo)
+
+### `GET /api/plant-types`
+```
+Query params: ?category=Microgreens&difficulty=Easy
+
+Response:
+[
+  {
+    "id": "uuid",
+    "name": "Microgreen de Rúcula",
+    "scientificName": "Eruca sativa",
+    "category": "Microgreens",
+    "description": "Microgreens de sabor picante...",
+    "daysToGerminate": 2,
+    "daysToHarvest": 10,
+    "optimalTemp": 18.5,
+    "optimalHumidity": 65.0,
+    "lightRequirement": "Medium",
+    "averageYield": 120.0,
+    "marketPrice": 0.15,
+    "difficulty": "Easy",
+    "_count": { "plantings": 25 }
+  }
+]
+```
+
+### `POST /api/plant-types` 🔒 Admin
+```json
+// Request
+{
+  "name": "Microgreen de Brócoli",
+  "scientificName": "Brassica oleracea",
+  "category": "Microgreens",
+  "daysToGerminate": 3,
+  "daysToHarvest": 12,
+  "optimalTemp": 20.0,
+  "averageYield": 100.0,
+  "difficulty": "Easy"
+}
+```
+
+### `GET /api/plant-types/:id`
+```
+Response: objeto PlantType con plantings recientes
+```
+
+### `PUT /api/plant-types/:id` 🔒 Admin
+### `DELETE /api/plant-types/:id` 🔒 Admin
+
+---
+
+## 🌱 Plantings CRUD (Actualizado)
 
 ### `GET /api/plantings`
 ```
-Query params: ?page=1&limit=10&plantName=search
+Query params: ?page=1&limit=10&plantName=search&status=GROWING&plantTypeId=uuid
 
 Response:
 {
   "data": [
     {
       "id": "uuid",
-      "plantName": "Microgreen de Rúcula",
+      "plantName": "Microgreen de Rúcula", // Legacy field
       "datePlanted": "2024-10-01T00:00:00.000Z",
       "expectedHarvest": "2024-10-15T00:00:00.000Z",
       "domeDate": "2024-10-03T00:00:00.000Z",
       "lightDate": "2024-10-06T00:00:00.000Z",
       "quantity": 200,
-      "yield": 150.5,
+      "status": "GROWING",
+      "trayNumber": "A-12",
+      "yield": 150.5, // Legacy field
       "notes": "Notes...",
-      "createdAt": "...",
-      "updatedAt": "..."
+      "plantType": {
+        "id": "uuid",
+        "name": "Microgreen de Rúcula",
+        "category": "Microgreens",
+        "daysToHarvest": 10,
+        "averageYield": 120.0
+      },
+      "harvests": [
+        {
+          "id": "uuid",
+          "harvestDate": "2024-10-15T00:00:00.000Z",
+          "weight": 125.5,
+          "quality": "EXCELLENT"
+        }
+      ],
+      "_count": { "harvests": 2 }
     }
   ],
   "pagination": {
@@ -136,19 +209,21 @@ Response:
 
 ### `POST /api/plantings`
 ```json
-// Request (solo plantName y datePlanted requeridos)
+// Request - NUEVO: con plantTypeId (recomendado) o plantName (legacy)
 {
-  "plantName": "Microgreen de Brócoli",
+  "plantTypeId": "uuid", // Recomendado: referencia al catálogo
+  "plantName": "Microgreen de Brócoli", // Legacy: solo si no usas plantTypeId
   "datePlanted": "2024-10-10",
-  "expectedHarvest": "2024-10-25",
+  "expectedHarvest": "2024-10-25", // Auto-calculado si usas plantTypeId
   "domeDate": "2024-10-12", 
   "lightDate": "2024-10-15",
   "quantity": 300,
-  "yield": null,
+  "status": "PLANTED", // PLANTED, GERMINATING, GROWING, etc.
+  "trayNumber": "B-05",
   "notes": "Optional notes"
 }
 
-// Response 201: objeto planting creado
+// Response 201: objeto planting con plantType y harvests incluidos
 ```
 
 ### `GET /api/plantings/:id`
@@ -173,6 +248,69 @@ Response 404: { "error": "Registro de siembra no encontrado" }
 // Response 200
 { "message": "Registro de siembra eliminado exitosamente" }
 ```
+
+---
+
+## 🌾 Harvests (Cosechas)
+
+### `GET /api/harvests`
+```
+Query params: ?page=1&limit=10&plantingId=uuid&quality=EXCELLENT
+
+Response:
+{
+  "data": [
+    {
+      "id": "uuid",
+      "harvestDate": "2024-10-15T00:00:00.000Z",
+      "weight": 125.5,
+      "quality": "EXCELLENT",
+      "notes": "Cosecha perfecta",
+      "pricePerGram": 0.15,
+      "totalValue": 18.83,
+      "appearance": 9,
+      "taste": 8,
+      "freshness": 10,
+      "planting": {
+        "id": "uuid",
+        "plantName": "Microgreen de Rúcula",
+        "plantType": {
+          "id": "uuid",
+          "name": "Microgreen de Rúcula"
+        }
+      }
+    }
+  ],
+  "pagination": { ... }
+}
+```
+
+### `GET /api/harvests/planting/:plantingId`
+```
+Response: array de todas las cosechas de una siembra específica
+```
+
+### `POST /api/harvests` 🔒
+```json
+// Request
+{
+  "plantingId": "uuid",
+  "harvestDate": "2024-10-15",
+  "weight": 125.5,
+  "quality": "EXCELLENT", // EXCELLENT, GOOD, FAIR, POOR
+  "notes": "Primera cosecha",
+  "pricePerGram": 0.15, // Opcional
+  "appearance": 9, // 1-10 scale
+  "taste": 8,
+  "freshness": 10
+}
+
+// Response 201: objeto harvest con planting incluido
+// NOTA: Actualiza automáticamente el status de la siembra a HARVESTED
+```
+
+### `PUT /api/harvests/:id` 🔒
+### `DELETE /api/harvests/:id` 🔒
 
 ---
 
@@ -222,23 +360,100 @@ Response 404: { "error": "Registro de siembra no encontrado" }
 
 ---
 
-## 🔧 Data Types
+## 🔧 Data Types (Modelo Híbrido v2.0)
 
-### Planting Object
+### PlantType Object (NUEVO)
+```typescript
+interface PlantType {
+  id: string;                    // UUID
+  name: string;                  // Required, unique
+  scientificName?: string;
+  category?: string;             // "Microgreens", "Herbs", etc.
+  description?: string;
+  
+  // Growing parameters
+  daysToGerminate?: number;
+  daysToHarvest?: number;
+  optimalTemp?: number;          // Celsius
+  optimalHumidity?: number;      // Percentage
+  lightRequirement?: string;     // "Low", "Medium", "High"
+  
+  // Business data
+  averageYield?: number;         // grams per tray
+  marketPrice?: number;          // price per gram
+  difficulty?: string;           // "Easy", "Medium", "Hard"
+  
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+```
+
+### Planting Object (Actualizado)
 ```typescript
 interface Planting {
   id: string;                    // UUID
-  plantName: string;             // Required, 1-100 chars
-  datePlanted: string;           // Required, ISO date "YYYY-MM-DD"
-  expectedHarvest?: string;      // Optional, ISO date
-  domeDate?: string;             // Optional, ISO date  
-  lightDate?: string;            // Optional, ISO date
-  quantity?: number;             // Optional, integer > 0
-  yield?: number;                // Optional, float ≥ 0
-  notes?: string;                // Optional, max 1000 chars
-  createdAt: string;             // Auto ISO datetime
-  updatedAt: string;             // Auto ISO datetime
-  deletedAt?: string;            // Soft delete timestamp
+  
+  // NUEVO: Relación con catálogo
+  plantTypeId?: string;          // UUID referencia a PlantType
+  plantType?: PlantType;         // Objeto incluido
+  
+  // Legacy field (deprecado pero compatible)
+  plantName?: string;
+  
+  // Core data
+  datePlanted: string;           // Required, ISO date
+  expectedHarvest?: string;      // Auto-calculado con plantType
+  domeDate?: string;
+  lightDate?: string;
+  quantity?: number;
+  
+  // NUEVO: Status tracking
+  status: 'PLANTED' | 'GERMINATING' | 'GROWING' | 'READY_TO_HARVEST' | 'HARVESTED' | 'FAILED';
+  
+  // NUEVO: Ubicación física
+  trayNumber?: string;
+  
+  // Legacy field (deprecado)
+  yield?: number;                // Usar Harvest model
+  
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+  
+  // NUEVO: Relaciones
+  harvests?: Harvest[];
+}
+```
+
+### Harvest Object (NUEVO)
+```typescript
+interface Harvest {
+  id: string;                    // UUID
+  plantingId: string;            // Required reference
+  
+  // Harvest data
+  harvestDate: string;           // Required, ISO date
+  weight: number;                // Required, grams
+  quality: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR';
+  notes?: string;
+  
+  // Market data
+  pricePerGram?: number;         // Optional
+  totalValue?: number;           // Auto-calculated
+  
+  // Quality metrics (1-10 scale)
+  appearance?: number;
+  taste?: number;
+  freshness?: number;
+  
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+  
+  // Relations
+  planting?: Planting;
 }
 ```
 
@@ -321,6 +536,39 @@ class MicroGreensAPI {
   deletePlanting(id) {
     return this.request(`/api/plantings/${id}`, { method: 'DELETE' });
   }
+
+  // Plant Types (NUEVO)
+  getPlantTypes(category = '', difficulty = '') {
+    const params = new URLSearchParams();
+    if (category) params.append('category', category);
+    if (difficulty) params.append('difficulty', difficulty);
+    return this.request(`/api/plant-types?${params}`);
+  }
+
+  createPlantType(data) {
+    return this.request('/api/plant-types', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  // Harvests (NUEVO)
+  getHarvests(page = 1, limit = 10, plantingId = '') {
+    const params = new URLSearchParams({ page, limit });
+    if (plantingId) params.append('plantingId', plantingId);
+    return this.request(`/api/harvests?${params}`);
+  }
+
+  createHarvest(data) {
+    return this.request('/api/harvests', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  getHarvestsByPlanting(plantingId) {
+    return this.request(`/api/harvests/planting/${plantingId}`);
+  }
 }
 
 // Usage
@@ -337,4 +585,51 @@ const api = new MicroGreensAPI('https://your-backend.vercel.app');
 - **Cookies:** HttpOnly, Secure in production, SameSite protection
 
 🔒 = Requires authentication  
-📖 Reference updated: 2025-09-10
+## 🚀 Ejemplos de Flujo con Modelo Híbrido
+
+```javascript
+// 1. Crear tipo de planta (Admin)
+const rucula = await api.createPlantType({
+  name: "Microgreen de Rúcula",
+  scientificName: "Eruca sativa",
+  category: "Microgreens",
+  daysToHarvest: 10,
+  averageYield: 120,
+  difficulty: "Easy"
+});
+
+// 2. Crear siembra usando el tipo
+const planting = await api.createPlanting({
+  plantTypeId: rucula.id,
+  datePlanted: "2024-10-01",
+  quantity: 300,
+  trayNumber: "A-12"
+  // expectedHarvest se calcula automáticamente: "2024-10-11"
+});
+
+// 3. Actualizar estado durante crecimiento
+await api.updatePlanting(planting.id, { 
+  status: "GERMINATING" 
+});
+
+// 4. Registrar primera cosecha
+const harvest1 = await api.createHarvest({
+  plantingId: planting.id,
+  harvestDate: "2024-10-11",
+  weight: 125.5,
+  quality: "EXCELLENT",
+  pricePerGram: 0.15
+  // totalValue: 18.83 (auto-calculado)
+  // status de planting → "HARVESTED" (automático)
+});
+
+// 5. Segunda cosecha de la misma siembra
+const harvest2 = await api.createHarvest({
+  plantingId: planting.id,
+  harvestDate: "2024-10-18",
+  weight: 89.2,
+  quality: "GOOD"
+});
+```
+
+📖 Reference updated: 2025-09-11 (Modelo Híbrido v2.0)

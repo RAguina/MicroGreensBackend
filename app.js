@@ -6,6 +6,8 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import plantingRoutes from './routes/plantingRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import plantTypeRoutes from './routes/plantTypeRoutes.js';
+import harvestRoutes from './routes/harvestRoutes.js';
 import { prisma } from './lib/prisma.js';
 import {
   generalLimiter,
@@ -68,8 +70,10 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api', strictLimiter); // Rate limiting estricto para plantings
-app.use('/api', plantingRoutes);
+app.use('/api', strictLimiter); // Rate limiting estricto para write operations
+app.use('/api/plantings', plantingRoutes);
+app.use('/api/plant-types', plantTypeRoutes);
+app.use('/api/harvests', harvestRoutes);
 
 // Error handler global
 app.use((error, req, res, next) => {

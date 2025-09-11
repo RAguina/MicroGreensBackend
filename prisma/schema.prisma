@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,19 +8,57 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
+  id        String     @id @default(uuid())
+  email     String     @unique
   password  String
   name      String
-  role      UserRole @default(GROWER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  role      UserRole   @default(GROWER)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
   deletedAt DateTime?
-
-  // Relations
   plantings Planting[]
 
   @@map("Users")
+}
+
+model Planting {
+  id              String         @id @default(uuid())
+  
+  // Legacy field for backward compatibility
+  plantName       String?        // Will be deprecated in favor of plantType.name
+  
+  // Core planting data
+  datePlanted     DateTime
+  expectedHarvest DateTime?
+  domeDate        DateTime?
+  lightDate       DateTime?
+  quantity        Int?
+  
+  // Status tracking
+  status          PlantingStatus @default(PLANTED)
+  
+  // Legacy yield field (deprecated - use Harvest model)
+  yield           Float?
+  
+  // Notes and metadata
+  notes           String?
+  trayNumber      String?        // Physical location identifier
+  
+  // Audit
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+  
+  // Relations
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  
+  plantTypeId     String?        // Optional for migration compatibility
+  plantType       PlantType?     @relation(fields: [plantTypeId], references: [id])
+  
+  harvests        Harvest[]
+
+  @@map("Plantings")
 }
 
 enum UserRole {
@@ -32,23 +67,78 @@ enum UserRole {
   VIEWER
 }
 
-model Planting {
-  id              String    @id @default(uuid())
-  plantName       String
-  datePlanted     DateTime
-  expectedHarvest DateTime?
-  domeDate        DateTime?
-  lightDate       DateTime?
-  quantity        Int?
-  yield           Float?
-  notes           String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+enum PlantingStatus {
+  PLANTED
+  GERMINATING
+  GROWING
+  READY_TO_HARVEST
+  HARVESTED
+  FAILED
+}
+
+enum HarvestQuality {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+}
+
+model PlantType {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  scientificName  String?
+  category        String?  // "Microgreens", "Herbs", "Leafy Greens"
+  description     String?
+  
+  // Growing parameters
+  daysToGerminate Int?
+  daysToHarvest   Int?
+  optimalTemp     Float?   // Celsius
+  optimalHumidity Float?   // Percentage
+  lightRequirement String? // "Low", "Medium", "High"
+  
+  // Business data
+  averageYield    Float?   // grams per tray
+  marketPrice     Float?   // price per gram
+  difficulty      String?  // "Easy", "Medium", "Hard"
+  
+  // Audit
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   deletedAt       DateTime?
-
+  
   // Relations
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
+  plantings       Planting[]
+  
+  @@map("PlantTypes")
+}
 
-  @@map("Plantings")
+model Harvest {
+  id            String         @id @default(uuid())
+  
+  // Harvest data
+  harvestDate   DateTime
+  weight        Float          // grams
+  quality       HarvestQuality
+  notes         String?
+  
+  // Market data
+  pricePerGram  Float?         // Optional pricing data
+  totalValue    Float?         // weight * pricePerGram
+  
+  // Quality metrics
+  appearance    Int?           // 1-10 scale
+  taste         Int?           // 1-10 scale  
+  freshness     Int?           // 1-10 scale
+  
+  // Audit
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
+  
+  // Relations
+  plantingId    String
+  planting      Planting       @relation(fields: [plantingId], references: [id], onDelete: Cascade)
+  
+  @@map("Harvests")
 }

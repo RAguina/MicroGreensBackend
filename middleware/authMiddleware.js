@@ -81,3 +81,8 @@ export const optionalAuth = (req, res, next) => {
     next();
   }
 };
+
+// Aliases comunes para facilitar uso
+export const requireAuth = authMiddleware;
+export const requireAdmin = requireRole('ADMIN');
+export const requireGrowerOrAdmin = requireRole('GROWER', 'ADMIN');

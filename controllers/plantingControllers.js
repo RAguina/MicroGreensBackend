@@ -4,27 +4,52 @@ export const createPlanting = async (req, res) => {
   try {
     const { 
       plantName, 
+      plantTypeId,
       datePlanted, 
       expectedHarvest, 
       domeDate, 
       lightDate, 
       quantity, 
       yield: plantYield, 
-      notes 
+      notes,
+      status,
+      trayNumber
     } = req.body;
     
     // Obtener userId del token (si está autenticado) o usar null temporalmente
     const userId = req.user?.userId || null;
     
+    // Validate plantType if provided
+    if (plantTypeId) {
+      const plantType = await prisma.plantType.findFirst({
+        where: { id: plantTypeId, deletedAt: null }
+      });
+      
+      if (!plantType) {
+        return res.status(400).json({ error: 'Tipo de planta no válido' });
+      }
+      
+      // Auto-calculate expectedHarvest if not provided
+      if (!expectedHarvest && plantType.daysToHarvest) {
+        const plantedDate = new Date(datePlanted);
+        const expectedDate = new Date(plantedDate);
+        expectedDate.setDate(plantedDate.getDate() + plantType.daysToHarvest);
+        expectedHarvest = expectedDate.toISOString();
+      }
+    }
+    
     const plantingData = {
-      plantName,
+      plantName: plantName || null, // Legacy field
+      plantTypeId: plantTypeId || null,
       datePlanted: new Date(datePlanted),
       expectedHarvest: expectedHarvest ? new Date(expectedHarvest) : null,
       domeDate: domeDate ? new Date(domeDate) : null,
       lightDate: lightDate ? new Date(lightDate) : null,
       quantity: quantity ? parseInt(quantity) : null,
-      yield: plantYield ? parseFloat(plantYield) : null,
+      yield: plantYield ? parseFloat(plantYield) : null, // Legacy field
       notes: notes || null,
+      status: status || 'PLANTED',
+      trayNumber: trayNumber || null,
     };
 
     // Solo agregar userId si existe
@@ -41,7 +66,19 @@ export const createPlanting = async (req, res) => {
             name: true,
             email: true
           }
-        } : false
+        } : false,
+        plantType: {
+          select: {
+            id: true,
+            name: true,
+            daysToHarvest: true,
+            averageYield: true
+          }
+        },
+        harvests: {
+          where: { deletedAt: null },
+          orderBy: { harvestDate: 'desc' }
+        }
       }
     });
     
@@ -57,18 +94,20 @@ export const createPlanting = async (req, res) => {
 
 export const getPlantings = async (req, res) => {
   try {
-    const { page = 1, limit = 10, plantName } = req.query;
+    const { page = 1, limit = 10, plantName, status, plantTypeId } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
-    const where = plantName 
-      ? { 
-          plantName: { 
-            contains: plantName, 
-            mode: 'insensitive' 
-          },
-          deletedAt: null
-        }
-      : { deletedAt: null };
+    const where = {
+      deletedAt: null,
+      ...(plantName && {
+        OR: [
+          { plantName: { contains: plantName, mode: 'insensitive' } },
+          { plantType: { name: { contains: plantName, mode: 'insensitive' } } }
+        ]
+      }),
+      ...(status && { status }),
+      ...(plantTypeId && { plantTypeId })
+    };
     
     const [plantings, total] = await Promise.all([
       prisma.planting.findMany({
@@ -76,6 +115,30 @@ export const getPlantings = async (req, res) => {
         skip,
         take: parseInt(limit),
         orderBy: { createdAt: 'desc' },
+        include: {
+          plantType: {
+            select: {
+              id: true,
+              name: true,
+              category: true,
+              daysToHarvest: true,
+              averageYield: true
+            }
+          },
+          harvests: {
+            where: { deletedAt: null },
+            select: {
+              id: true,
+              harvestDate: true,
+              weight: true,
+              quality: true
+            },
+            orderBy: { harvestDate: 'desc' }
+          },
+          _count: {
+            select: { harvests: true }
+          }
+        }
       }),
       prisma.planting.count({ where })
     ]);
@@ -106,6 +169,36 @@ export const getPlantingById = async (req, res) => {
       where: { 
         id,
         deletedAt: null
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        plantType: {
+          select: {
+            id: true,
+            name: true,
+            scientificName: true,
+            category: true,
+            description: true,
+            daysToGerminate: true,
+            daysToHarvest: true,
+            optimalTemp: true,
+            optimalHumidity: true,
+            lightRequirement: true,
+            averageYield: true,
+            marketPrice: true,
+            difficulty: true
+          }
+        },
+        harvests: {
+          where: { deletedAt: null },
+          orderBy: { harvestDate: 'desc' }
+        }
       }
     });
     
@@ -128,13 +221,16 @@ export const updatePlanting = async (req, res) => {
     const { id } = req.params;
     const { 
       plantName, 
+      plantTypeId,
       datePlanted, 
       expectedHarvest, 
       domeDate, 
       lightDate, 
       quantity, 
       yield: plantYield, 
-      notes 
+      notes,
+      status,
+      trayNumber
     } = req.body;
     
     // Verificar si existe
@@ -149,10 +245,22 @@ export const updatePlanting = async (req, res) => {
       return res.status(404).json({ error: 'Registro de siembra no encontrado' });
     }
     
+    // Validate plantType if provided
+    if (plantTypeId) {
+      const plantType = await prisma.plantType.findFirst({
+        where: { id: plantTypeId, deletedAt: null }
+      });
+      
+      if (!plantType) {
+        return res.status(400).json({ error: 'Tipo de planta no válido' });
+      }
+    }
+    
     const updatedPlanting = await prisma.planting.update({
       where: { id },
       data: {
-        plantName,
+        plantName: plantName !== undefined ? plantName : undefined,
+        plantTypeId: plantTypeId !== undefined ? plantTypeId : undefined,
         datePlanted: datePlanted ? new Date(datePlanted) : undefined,
         expectedHarvest: expectedHarvest ? new Date(expectedHarvest) : undefined,
         domeDate: domeDate ? new Date(domeDate) : undefined,
@@ -160,7 +268,23 @@ export const updatePlanting = async (req, res) => {
         quantity: quantity !== undefined ? parseInt(quantity) : undefined,
         yield: plantYield !== undefined ? parseFloat(plantYield) : undefined,
         notes: notes !== undefined ? notes : undefined,
+        status: status !== undefined ? status : undefined,
+        trayNumber: trayNumber !== undefined ? trayNumber : undefined,
       },
+      include: {
+        plantType: {
+          select: {
+            id: true,
+            name: true,
+            daysToHarvest: true,
+            averageYield: true
+          }
+        },
+        harvests: {
+          where: { deletedAt: null },
+          orderBy: { harvestDate: 'desc' }
+        }
+      }
     });
     
     res.status(200).json(updatedPlanting);
