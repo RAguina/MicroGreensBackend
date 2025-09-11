@@ -71,8 +71,9 @@ export const validateCreatePlantType = [
 // Validación para actualizar PlantType
 export const validateUpdatePlantType = [
   param('id')
-    .isUUID()
-    .withMessage('ID debe ser un UUID válido'),
+    .isLength({ min: 20, max: 30 })
+    .matches(/^[a-z0-9]+$/)
+    .withMessage('ID debe ser válido'),
 
   // Mismas validaciones que create pero todas opcionales
   body('name')
@@ -145,8 +146,9 @@ export const validateUpdatePlantType = [
 // Validación para ID de parámetro
 export const validatePlantTypeId = [
   param('id')
-    .isUUID()
-    .withMessage('ID debe ser un UUID válido')
+    .isLength({ min: 20, max: 30 })
+    .matches(/^[a-z0-9]+$/)
+    .withMessage('ID debe ser válido')
 ];
 
 // Validación para query parameters
