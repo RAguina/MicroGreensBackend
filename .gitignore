@@ -104,3 +104,6 @@ Thumbs.db
 
 # Prisma
 /generated/prisma
+
+# Documentation - long version not for repo
+API_DOCUMENTATION.md
