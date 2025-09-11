@@ -16,8 +16,23 @@ export const createPlanting = async (req, res) => {
       trayNumber
     } = req.body;
     
-    // Obtener userId del token (si está autenticado) o usar null temporalmente
-    const userId = req.user?.userId || null;
+    // Obtener userId del token o crear/usar usuario por defecto para desarrollo
+    let userId = req.user?.userId;
+    
+    if (!userId) {
+      // Para desarrollo: crear o usar usuario por defecto
+      const defaultUser = await prisma.user.upsert({
+        where: { email: 'default@microgreens.dev' },
+        update: {},
+        create: {
+          email: 'default@microgreens.dev',
+          password: 'temp_password_hash',
+          name: 'Usuario de Desarrollo',
+          role: 'GROWER'
+        }
+      });
+      userId = defaultUser.id;
+    }
     
     // Validate plantType if provided
     if (plantTypeId) {
@@ -52,21 +67,19 @@ export const createPlanting = async (req, res) => {
       trayNumber: trayNumber || null,
     };
 
-    // Solo agregar userId si existe
-    if (userId) {
-      plantingData.userId = userId;
-    }
+    // userId siempre existe ahora (autenticado o usuario por defecto)
+    plantingData.userId = userId;
     
     const newPlanting = await prisma.planting.create({
       data: plantingData,
       include: {
-        user: userId ? {
+        user: {
           select: {
             id: true,
             name: true,
             email: true
           }
-        } : false,
+        },
         plantType: {
           select: {
             id: true,
