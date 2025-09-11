@@ -16,15 +16,29 @@ export const handleValidationErrors = (req, res, next) => {
   next();
 };
 
-// Validaciones para crear siembra
+// Validaciones para crear siembra (modelo híbrido)
 export const validateCreatePlanting = [
+  // Validación custom: plantTypeId OR plantName debe estar presente
+  body()
+    .custom((value, { req }) => {
+      const { plantTypeId, plantName } = req.body;
+      if (!plantTypeId && !plantName) {
+        throw new Error('Se debe proporcionar plantTypeId o plantName');
+      }
+      return true;
+    }),
+
+  body('plantTypeId')
+    .optional()
+    .isUUID()
+    .withMessage('plantTypeId debe ser un UUID válido'),
+
   body('plantName')
-    .notEmpty()
-    .withMessage('El nombre de la planta es requerido')
+    .optional()
     .isLength({ min: 1, max: 100 })
     .withMessage('El nombre debe tener entre 1 y 100 caracteres')
     .trim(),
-    
+
   body('datePlanted')
     .notEmpty()
     .withMessage('La fecha de plantación es requerida')
@@ -61,6 +75,18 @@ export const validateCreatePlanting = [
     .isLength({ max: 1000 })
     .withMessage('Las notas no pueden exceder los 1000 caracteres')
     .trim(),
+
+  // Nuevos campos del modelo híbrido
+  body('status')
+    .optional()
+    .isIn(['PLANTED', 'GERMINATING', 'GROWING', 'READY_TO_HARVEST', 'HARVESTED', 'FAILED'])
+    .withMessage('Status debe ser: PLANTED, GERMINATING, GROWING, READY_TO_HARVEST, HARVESTED o FAILED'),
+
+  body('trayNumber')
+    .optional()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('El número de bandeja debe tener entre 1 y 50 caracteres')
+    .trim(),
     
   handleValidationErrors
 ];
@@ -70,6 +96,11 @@ export const validateUpdatePlanting = [
   param('id')
     .isUUID()
     .withMessage('El ID debe ser un UUID válido'),
+
+  body('plantTypeId')
+    .optional()
+    .isUUID()
+    .withMessage('plantTypeId debe ser un UUID válido'),
     
   body('plantName')
     .optional()
@@ -112,6 +143,18 @@ export const validateUpdatePlanting = [
     .isLength({ max: 1000 })
     .withMessage('Las notas no pueden exceder los 1000 caracteres')
     .trim(),
+
+  // Nuevos campos del modelo híbrido
+  body('status')
+    .optional()
+    .isIn(['PLANTED', 'GERMINATING', 'GROWING', 'READY_TO_HARVEST', 'HARVESTED', 'FAILED'])
+    .withMessage('Status debe ser: PLANTED, GERMINATING, GROWING, READY_TO_HARVEST, HARVESTED o FAILED'),
+
+  body('trayNumber')
+    .optional()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('El número de bandeja debe tener entre 1 y 50 caracteres')
+    .trim(),
     
   handleValidationErrors
 ];
@@ -142,6 +185,17 @@ export const validateQueryParams = [
     .isLength({ min: 1, max: 100 })
     .withMessage('El nombre de búsqueda debe tener entre 1 y 100 caracteres')
     .trim(),
+
+  // Nuevos filtros del modelo híbrido
+  query('status')
+    .optional()
+    .isIn(['PLANTED', 'GERMINATING', 'GROWING', 'READY_TO_HARVEST', 'HARVESTED', 'FAILED'])
+    .withMessage('Status debe ser: PLANTED, GERMINATING, GROWING, READY_TO_HARVEST, HARVESTED o FAILED'),
+
+  query('plantTypeId')
+    .optional()
+    .isUUID()
+    .withMessage('plantTypeId debe ser un UUID válido'),
     
   handleValidationErrors
 ];
