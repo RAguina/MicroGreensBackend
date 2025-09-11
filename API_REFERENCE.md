@@ -4,7 +4,7 @@
 
 ## 🌐 Base URL
 ```
-Production: [YOUR_VERCEL_URL]
+Production: https://micro-greens-backend.vercel.app
 Development: http://localhost:5001
 ```
 
