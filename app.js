@@ -21,6 +21,10 @@ dotenv.config();
 
 const app = express();
 
+// Trust proxy para producción (Vercel, AWS, etc.)
+// Esto permite que express-rate-limit funcione correctamente con X-Forwarded-For headers
+app.set('trust proxy', process.env.NODE_ENV === 'production');
+
 // Middlewares de seguridad
 app.use(helmet({
   contentSecurityPolicy: {
