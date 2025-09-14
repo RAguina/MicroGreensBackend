@@ -87,8 +87,10 @@ export const register = async (req, res) => {
 
     // Hash de la contraseña
     console.log('🔒 [AUTH] Hashing password with bcrypt...');
+    console.log('🔒 [AUTH] Password length before hash:', password?.length);
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
+    console.log('🔒 [AUTH] Hash generated successfully, length:', hashedPassword.length, 'starts with:', hashedPassword.substring(0, 7));
 
     // Crear usuario
     console.log('📝 [AUTH] Creating user in database...');
@@ -180,7 +182,10 @@ export const login = async (req, res) => {
 
     // Verificar contraseña
     console.log('🔒 [AUTH] Verifying password...');
+    console.log('🔒 [AUTH] Input password length:', password?.length);
+    console.log('🔒 [AUTH] Stored hash length:', user.password?.length, 'starts with:', user.password?.substring(0, 7));
     const validPassword = await bcrypt.compare(password, user.password);
+    console.log('🔒 [AUTH] bcrypt.compare result:', validPassword);
     if (!validPassword) {
       console.log('❌ [AUTH] Invalid password for user:', email);
       return res.status(401).json({ 
