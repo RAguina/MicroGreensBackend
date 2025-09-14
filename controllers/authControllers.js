@@ -54,6 +54,14 @@ const setCookies = (res, token, refreshToken) => {
 
 export const register = async (req, res) => {
   try {
+    console.log('📥 [FRONTEND REQUEST] Register request received:', {
+      method: req.method,
+      url: req.originalUrl,
+      contentType: req.headers['content-type'],
+      origin: req.headers.origin,
+      realIP: req.ip
+    });
+    
     console.log('🔄 [AUTH] Register attempt:', { 
       email: req.body.email, 
       name: req.body.name,
@@ -126,6 +134,22 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
+    console.log('📥 [FRONTEND REQUEST] Login request received:', {
+      method: req.method,
+      url: req.originalUrl,
+      contentType: req.headers['content-type'],
+      bodySize: JSON.stringify(req.body).length,
+      hasBody: Object.keys(req.body).length > 0
+    });
+    
+    console.log('🌐 [FRONTEND REQUEST] Headers & Origin:', {
+      origin: req.headers.origin,
+      referer: req.headers.referer,
+      host: req.headers.host,
+      forwarded: req.headers['x-forwarded-for']?.split(',')[0]?.trim(),
+      realIP: req.ip
+    });
+    
     console.log('🔄 [AUTH] Login attempt:', { 
       email: req.body.email,
       hasPassword: !!req.body.password,
