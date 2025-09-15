@@ -23,14 +23,6 @@ const generateRefreshToken = (userId) => {
 
 // Configurar solo refreshToken en cookie (patrón correcto)
 const setRefreshTokenCookie = (res, refreshToken) => {
-  console.log('🍪 [AUTH] Setting refreshToken cookie with cross-site options:', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    path: '/',
-    environment: process.env.NODE_ENV
-  });
-
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -38,22 +30,17 @@ const setRefreshTokenCookie = (res, refreshToken) => {
     path: '/'
   };
 
-  console.log('🍪 [AUTH] Setting refreshToken cookie (7d expiry)...');
   res.cookie('refreshToken', refreshToken, {
     ...cookieOptions,
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días
   });
-
-  console.log('✅ [AUTH] RefreshToken cookie set successfully');
 };
 
 // Generar CSRF token
 export const generateCSRFToken = async (req, res) => {
   try {
-    console.log('🛡️ [CSRF] Generating CSRF token for client');
-    
     const csrfToken = crypto.randomBytes(32).toString('hex');
-    
+
     // Cookie para validación server-side (NO HttpOnly para compatibilidad con incógnito)
     res.cookie('csrf-token', csrfToken, {
       httpOnly: false, // Permite lectura desde JS para modo incógnito
@@ -62,63 +49,40 @@ export const generateCSRFToken = async (req, res) => {
       path: '/',
       maxAge: 24 * 60 * 60 * 1000 // 24 horas
     });
-    
+
     // Header para que el cliente pueda leerlo
     res.set('X-CSRF-Token', csrfToken);
-    
-    console.log('✅ [CSRF] CSRF token generated and set');
-    res.status(200).json({ 
+
+    res.status(200).json({
       message: 'CSRF token generado',
-      csrfToken // También en el body por si acaso
+      csrfToken
     });
   } catch (error) {
-    console.error('💥 [CSRF] Error generating CSRF token:', error);
+    console.error('Error generating CSRF token:', error);
     res.status(500).json({ error: 'Error generando CSRF token' });
   }
 };
 
 export const register = async (req, res) => {
   try {
-    console.log('📥 [FRONTEND REQUEST] Register request received:', {
-      method: req.method,
-      url: req.originalUrl,
-      contentType: req.headers['content-type'],
-      origin: req.headers.origin,
-      realIP: req.ip
-    });
-    
-    console.log('🔄 [AUTH] Register attempt:', { 
-      email: req.body.email, 
-      name: req.body.name,
-      hasPassword: !!req.body.password,
-      origin: req.headers.origin,
-      userAgent: req.headers['user-agent']?.substring(0, 50) + '...'
-    });
-
     const { email, password, name } = req.body;
 
     // Verificar si el usuario ya existe
-    console.log('🔍 [AUTH] Checking existing user for email:', email);
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
 
     if (existingUser) {
-      console.log('❌ [AUTH] User already exists:', email);
-      return res.status(400).json({ 
-        error: 'Ya existe un usuario con este email' 
+      return res.status(400).json({
+        error: 'Ya existe un usuario con este email'
       });
     }
 
     // Hash de la contraseña
-    console.log('🔒 [AUTH] Hashing password with bcrypt...');
-    console.log('🔒 [AUTH] Password length before hash:', password?.length);
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
-    console.log('🔒 [AUTH] Hash generated successfully, length:', hashedPassword.length, 'starts with:', hashedPassword.substring(0, 7));
 
     // Crear usuario
-    console.log('📝 [AUTH] Creating user in database...');
     const user = await prisma.user.create({
       data: {
         email,
@@ -134,25 +98,20 @@ export const register = async (req, res) => {
       }
     });
 
-    console.log('✅ [AUTH] User created successfully:', { id: user.id, email: user.email });
-
     // Generar tokens
-    console.log('🎫 [AUTH] Generating JWT tokens...');
     const token = generateToken(user.id, user.email, user.role);
     const refreshToken = generateRefreshToken(user.id);
 
     // Establecer solo refreshToken cookie, devolver accessToken en response
-    console.log('🍪 [AUTH] Setting refreshToken cookie...');
     setRefreshTokenCookie(res, refreshToken);
 
-    console.log('🎉 [AUTH] Registration completed successfully for:', email);
     res.status(201).json({
       message: 'Usuario registrado exitosamente',
       accessToken: token,
       user
     });
   } catch (error) {
-    console.error('💥 [AUTH] Register error:', error);
+    console.error('Register error:', error);
     res.status(500).json({ 
       error: 'Error interno del servidor',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -162,34 +121,9 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    console.log('📥 [FRONTEND REQUEST] Login request received:', {
-      method: req.method,
-      url: req.originalUrl,
-      contentType: req.headers['content-type'],
-      bodySize: JSON.stringify(req.body).length,
-      hasBody: Object.keys(req.body).length > 0
-    });
-    
-    console.log('🌐 [FRONTEND REQUEST] Headers & Origin:', {
-      origin: req.headers.origin,
-      referer: req.headers.referer,
-      host: req.headers.host,
-      forwarded: req.headers['x-forwarded-for']?.split(',')[0]?.trim(),
-      realIP: req.ip
-    });
-    
-    console.log('🔄 [AUTH] Login attempt:', { 
-      email: req.body.email,
-      hasPassword: !!req.body.password,
-      origin: req.headers.origin,
-      cookies: Object.keys(req.cookies || {}),
-      userAgent: req.headers['user-agent']?.substring(0, 50) + '...'
-    });
-
     const { email, password } = req.body;
 
     // Buscar usuario por email
-    console.log('🔍 [AUTH] Looking for user:', email);
     const user = await prisma.user.findFirst({
       where: { 
         email,
@@ -198,49 +132,38 @@ export const login = async (req, res) => {
     });
 
     if (!user) {
-      console.log('❌ [AUTH] User not found:', email);
-      return res.status(401).json({ 
-        error: 'Credenciales inválidas' 
+      return res.status(401).json({
+        error: 'Credenciales inválidas'
       });
     }
 
-    console.log('👤 [AUTH] User found:', { id: user.id, email: user.email, role: user.role });
 
     // Verificar contraseña
-    console.log('🔒 [AUTH] Verifying password...');
-    console.log('🔒 [AUTH] Input password length:', password?.length);
-    console.log('🔒 [AUTH] Stored hash length:', user.password?.length, 'starts with:', user.password?.substring(0, 7));
     const validPassword = await bcrypt.compare(password, user.password);
-    console.log('🔒 [AUTH] bcrypt.compare result:', validPassword);
     if (!validPassword) {
-      console.log('❌ [AUTH] Invalid password for user:', email);
-      return res.status(401).json({ 
-        error: 'Credenciales inválidas' 
+      return res.status(401).json({
+        error: 'Credenciales inválidas'
       });
     }
 
-    console.log('✅ [AUTH] Password verified successfully');
 
     // Generar tokens
-    console.log('🎫 [AUTH] Generating JWT tokens...');
     const token = generateToken(user.id, user.email, user.role);
     const refreshToken = generateRefreshToken(user.id);
 
     // Establecer solo refreshToken cookie, devolver accessToken en response
-    console.log('🍪 [AUTH] Setting refreshToken cookie...');
     setRefreshTokenCookie(res, refreshToken);
 
     // Respuesta sin contraseña
     const { password: _, ...userWithoutPassword } = user;
 
-    console.log('🎉 [AUTH] Login successful for:', email);
     res.status(200).json({
       message: 'Login exitoso',
       accessToken: token,
       user: userWithoutPassword
     });
   } catch (error) {
-    console.error('💥 [AUTH] Login error:', error);
+    console.error('Login error:', error);
     res.status(500).json({ 
       error: 'Error interno del servidor',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -250,12 +173,6 @@ export const login = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    console.log('🚪 [AUTH] Logout attempt:', {
-      userId: req.user?.userId || 'Unknown',
-      origin: req.headers.origin,
-      cookies: Object.keys(req.cookies || {})
-    });
-
     // Limpiar cookies con la misma configuración que se usó para crearlas
     const cookieOptions = {
       httpOnly: true,
@@ -264,16 +181,14 @@ export const logout = async (req, res) => {
       path: '/'
     };
 
-    console.log('🧹 [AUTH] Clearing refreshToken cookie...');
     res.clearCookie('refreshToken', cookieOptions);
 
-    console.log('✅ [AUTH] Logout successful, cookies cleared');
     res.status(200).json({
       message: 'Logout exitoso'
     });
   } catch (error) {
-    console.error('💥 [AUTH] Logout error:', error);
-    res.status(500).json({ 
+    console.error('Logout error:', error);
+    res.status(500).json({
       error: 'Error interno del servidor'
     });
   }
@@ -281,17 +196,10 @@ export const logout = async (req, res) => {
 
 export const getMe = async (req, res) => {
   try {
-    console.log('👤 [AUTH] GetMe request:', {
-      userId: req.user?.userId || 'Missing',
-      origin: req.headers.origin,
-      userAgent: req.headers['user-agent']?.substring(0, 50) + '...'
-    });
-
     const userId = req.user.userId;
 
-    console.log('🔍 [AUTH] Looking up user profile for:', userId);
     const user = await prisma.user.findFirst({
-      where: { 
+      where: {
         id: userId,
         deletedAt: null
       },
@@ -315,18 +223,10 @@ export const getMe = async (req, res) => {
     });
 
     if (!user) {
-      console.log('❌ [AUTH] User not found in database:', userId);
-      return res.status(404).json({ 
-        error: 'Usuario no encontrado' 
+      return res.status(404).json({
+        error: 'Usuario no encontrado'
       });
     }
-
-    console.log('✅ [AUTH] User profile retrieved:', { 
-      id: user.id, 
-      email: user.email, 
-      role: user.role,
-      plantingsCount: user._count.plantings
-    });
 
     res.status(200).json({
       user: {
@@ -335,8 +235,8 @@ export const getMe = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('💥 [AUTH] GetMe error:', error);
-    res.status(500).json({ 
+    console.error('GetMe error:', error);
+    res.status(500).json({
       error: 'Error interno del servidor',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -345,36 +245,26 @@ export const getMe = async (req, res) => {
 
 export const refreshToken = async (req, res) => {
   try {
-    console.log('🔄 [AUTH] Refresh token attempt:', {
-      origin: req.headers.origin,
-      cookies: Object.keys(req.cookies || {}),
-      userAgent: req.headers['user-agent']?.substring(0, 50) + '...'
-    });
-
     const { refreshToken } = req.cookies;
 
     if (!refreshToken) {
-      console.log('❌ [AUTH] No refresh token found in cookies');
-      return res.status(401).json({ 
-        error: 'Refresh token no encontrado' 
+      return res.status(401).json({
+        error: 'Refresh token no encontrado'
       });
     }
 
-    console.log('🔍 [AUTH] Refresh token found, verifying...');
     // Verificar refresh token
     const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
-    
+
     if (decoded.type !== 'refresh') {
-      console.log('❌ [AUTH] Token is not a refresh token:', decoded.type);
-      return res.status(401).json({ 
-        error: 'Token inválido' 
+      return res.status(401).json({
+        error: 'Token inválido'
       });
     }
 
-    console.log('✅ [AUTH] Refresh token verified, looking up user:', decoded.userId);
     // Buscar usuario
     const user = await prisma.user.findFirst({
-      where: { 
+      where: {
         id: decoded.userId,
         deletedAt: null
       },
@@ -386,14 +276,11 @@ export const refreshToken = async (req, res) => {
     });
 
     if (!user) {
-      console.log('❌ [AUTH] User not found for refresh token:', decoded.userId);
-      return res.status(401).json({ 
-        error: 'Usuario no encontrado' 
+      return res.status(401).json({
+        error: 'Usuario no encontrado'
       });
     }
 
-    console.log('👤 [AUTH] User found for refresh:', { id: user.id, email: user.email });
-    console.log('🎫 [AUTH] Generating new token pair...');
     // Generar nuevos tokens
     const newToken = generateToken(user.id, user.email, user.role);
     const newRefreshToken = generateRefreshToken(user.id);
@@ -401,7 +288,6 @@ export const refreshToken = async (req, res) => {
     // Establecer nueva refreshToken cookie, devolver accessToken
     setRefreshTokenCookie(res, newRefreshToken);
 
-    console.log('🎉 [AUTH] Token refresh successful for user:', user.email);
     res.status(200).json({
       message: 'Token refrescado exitosamente',
       accessToken: newToken,
@@ -412,19 +298,16 @@ export const refreshToken = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('💥 [AUTH] Refresh token error:', error.name, error.message);
-    
+    console.error('Refresh token error:', error.name, error.message);
+
     if (error.name === 'JsonWebTokenError') {
-      console.log('❌ [AUTH] Invalid refresh token');
       return res.status(401).json({ error: 'Token inválido' });
     }
     if (error.name === 'TokenExpiredError') {
-      console.log('⏰ [AUTH] Refresh token expired');
       return res.status(401).json({ error: 'Token expirado' });
     }
 
-    console.log('❌ [AUTH] General refresh error');
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Error interno del servidor',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });

@@ -2,51 +2,38 @@ import jwt from 'jsonwebtoken';
 
 export const authMiddleware = (req, res, next) => {
   try {
-    console.log('🔐 [AUTH MIDDLEWARE] Checking authentication for:', req.method, req.path);
-    console.log('🔐 [AUTH MIDDLEWARE] Available cookies:', Object.keys(req.cookies || {}));
-    console.log('🔐 [AUTH MIDDLEWARE] Authorization header:', req.headers['authorization'] ? 'Present' : 'Missing');
-    
     // Priorizar token de cookie (más seguro)
     let token = req.cookies?.token;
-    console.log('🍪 [AUTH MIDDLEWARE] Token from cookie:', token ? 'Present' : 'Missing');
-    
+
     // Fallback a Authorization header si no hay cookie
     if (!token) {
       const authHeader = req.headers['authorization'];
       if (authHeader && authHeader.startsWith('Bearer ')) {
         token = authHeader.substring(7);
-        console.log('🔑 [AUTH MIDDLEWARE] Token from Bearer header:', token ? 'Present' : 'Missing');
       }
     }
 
     if (!token) {
-      console.log('❌ [AUTH MIDDLEWARE] No token found');
-      return res.status(401).json({ 
-        error: 'Acceso denegado - Token requerido' 
+      return res.status(401).json({
+        error: 'Acceso denegado - Token requerido'
       });
     }
 
-    console.log('✅ [AUTH MIDDLEWARE] Token found, verifying...');
     const verified = jwt.verify(token, process.env.JWT_SECRET);
     req.user = verified;
-    console.log('🎉 [AUTH MIDDLEWARE] Token verified successfully for user:', verified.userId);
     next();
   } catch (error) {
-    console.log('💥 [AUTH MIDDLEWARE] JWT Error:', error.name, error.message);
-    
     if (error.name === 'JsonWebTokenError') {
-      console.log('❌ [AUTH MIDDLEWARE] Invalid token');
       return res.status(401).json({ error: 'Token inválido' });
     }
     if (error.name === 'TokenExpiredError') {
-      console.log('⏰ [AUTH MIDDLEWARE] Token expired');
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'Token expirado',
         code: 'TOKEN_EXPIRED'
       });
     }
-    
-    console.log('❌ [AUTH MIDDLEWARE] General auth error');
+
+    console.error('Auth middleware error:', error);
     return res.status(401).json({ error: 'Error de autenticación' });
   }
 };
