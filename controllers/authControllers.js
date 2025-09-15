@@ -54,8 +54,9 @@ export const generateCSRFToken = async (req, res) => {
     
     const csrfToken = crypto.randomBytes(32).toString('hex');
     
-    // Cookie para validación server-side (no HttpOnly para que el cliente pueda leerla si es necesario)
+    // Cookie para validación server-side (NO HttpOnly para compatibilidad con incógnito)
     res.cookie('csrf-token', csrfToken, {
+      httpOnly: false, // Permite lectura desde JS para modo incógnito
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
