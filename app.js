@@ -49,7 +49,7 @@ app.use(additionalSecurityHeaders);
 app.use(sanitizeHeaders);
 app.use(logSensitiveOperations);
 
-// CORS configurado para cross-site cookies
+// CORS configurado para cross-site cookies con headers expuestos
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -59,7 +59,7 @@ app.use(cors({
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
-  exposedHeaders: ['X-CSRF-Token']
+  exposedHeaders: ['X-CSRF-Token', 'Content-Type']
 }));
 
 // Rate limiting

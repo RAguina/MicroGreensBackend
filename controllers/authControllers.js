@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 // Generar JWT token
 const generateToken = (userId, email, role) => {
@@ -20,9 +21,9 @@ const generateRefreshToken = (userId) => {
   );
 };
 
-// Configurar cookies para cross-site requests
-const setCookies = (res, token, refreshToken) => {
-  console.log('🍪 [AUTH] Setting up cookies with cross-site options:', {
+// Configurar solo refreshToken en cookie (patrón correcto)
+const setRefreshTokenCookie = (res, refreshToken) => {
+  console.log('🍪 [AUTH] Setting refreshToken cookie with cross-site options:', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
@@ -37,19 +38,42 @@ const setCookies = (res, token, refreshToken) => {
     path: '/'
   };
 
-  console.log('🍪 [AUTH] Setting token cookie (24h expiry)...');
-  res.cookie('token', token, {
-    ...cookieOptions,
-    maxAge: 24 * 60 * 60 * 1000 // 24 horas
-  });
-
   console.log('🍪 [AUTH] Setting refreshToken cookie (7d expiry)...');
   res.cookie('refreshToken', refreshToken, {
     ...cookieOptions,
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días
   });
 
-  console.log('✅ [AUTH] Both cookies set successfully');
+  console.log('✅ [AUTH] RefreshToken cookie set successfully');
+};
+
+// Generar CSRF token
+export const generateCSRFToken = async (req, res) => {
+  try {
+    console.log('🛡️ [CSRF] Generating CSRF token for client');
+    
+    const csrfToken = crypto.randomBytes(32).toString('hex');
+    
+    // Cookie para validación server-side (no HttpOnly para que el cliente pueda leerla si es necesario)
+    res.cookie('csrf-token', csrfToken, {
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000 // 24 horas
+    });
+    
+    // Header para que el cliente pueda leerlo
+    res.set('X-CSRF-Token', csrfToken);
+    
+    console.log('✅ [CSRF] CSRF token generated and set');
+    res.status(200).json({ 
+      message: 'CSRF token generado',
+      csrfToken // También en el body por si acaso
+    });
+  } catch (error) {
+    console.error('💥 [CSRF] Error generating CSRF token:', error);
+    res.status(500).json({ error: 'Error generando CSRF token' });
+  }
 };
 
 export const register = async (req, res) => {
@@ -116,13 +140,14 @@ export const register = async (req, res) => {
     const token = generateToken(user.id, user.email, user.role);
     const refreshToken = generateRefreshToken(user.id);
 
-    // Establecer cookies
-    console.log('🍪 [AUTH] Setting HTTP-only cookies...');
-    setCookies(res, token, refreshToken);
+    // Establecer solo refreshToken cookie, devolver accessToken en response
+    console.log('🍪 [AUTH] Setting refreshToken cookie...');
+    setRefreshTokenCookie(res, refreshToken);
 
     console.log('🎉 [AUTH] Registration completed successfully for:', email);
     res.status(201).json({
       message: 'Usuario registrado exitosamente',
+      accessToken: token,
       user
     });
   } catch (error) {
@@ -200,9 +225,9 @@ export const login = async (req, res) => {
     const token = generateToken(user.id, user.email, user.role);
     const refreshToken = generateRefreshToken(user.id);
 
-    // Establecer cookies
-    console.log('🍪 [AUTH] Setting HTTP-only cookies...');
-    setCookies(res, token, refreshToken);
+    // Establecer solo refreshToken cookie, devolver accessToken en response
+    console.log('🍪 [AUTH] Setting refreshToken cookie...');
+    setRefreshTokenCookie(res, refreshToken);
 
     // Respuesta sin contraseña
     const { password: _, ...userWithoutPassword } = user;
@@ -210,6 +235,7 @@ export const login = async (req, res) => {
     console.log('🎉 [AUTH] Login successful for:', email);
     res.status(200).json({
       message: 'Login exitoso',
+      accessToken: token,
       user: userWithoutPassword
     });
   } catch (error) {
@@ -237,8 +263,7 @@ export const logout = async (req, res) => {
       path: '/'
     };
 
-    console.log('🧹 [AUTH] Clearing authentication cookies...');
-    res.clearCookie('token', cookieOptions);
+    console.log('🧹 [AUTH] Clearing refreshToken cookie...');
     res.clearCookie('refreshToken', cookieOptions);
 
     console.log('✅ [AUTH] Logout successful, cookies cleared');
@@ -372,12 +397,18 @@ export const refreshToken = async (req, res) => {
     const newToken = generateToken(user.id, user.email, user.role);
     const newRefreshToken = generateRefreshToken(user.id);
 
-    // Establecer nuevas cookies
-    setCookies(res, newToken, newRefreshToken);
+    // Establecer nueva refreshToken cookie, devolver accessToken
+    setRefreshTokenCookie(res, newRefreshToken);
 
     console.log('🎉 [AUTH] Token refresh successful for user:', user.email);
     res.status(200).json({
-      message: 'Token refrescado exitosamente'
+      message: 'Token refrescado exitosamente',
+      accessToken: newToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role
+      }
     });
   } catch (error) {
     console.error('💥 [AUTH] Refresh token error:', error.name, error.message);
@@ -439,15 +470,17 @@ export const updateProfile = async (req, res) => {
     });
 
     // Si se cambió el email, generar nuevo token
+    let newAccessToken = null;
     if (email && email !== req.user.email) {
-      const newToken = generateToken(updatedUser.id, updatedUser.email, updatedUser.role);
+      newAccessToken = generateToken(updatedUser.id, updatedUser.email, updatedUser.role);
       const newRefreshToken = generateRefreshToken(updatedUser.id);
-      setCookies(res, newToken, newRefreshToken);
+      setRefreshTokenCookie(res, newRefreshToken);
     }
 
     res.status(200).json({
       message: 'Perfil actualizado exitosamente',
-      user: updatedUser
+      user: updatedUser,
+      ...(newAccessToken && { accessToken: newAccessToken })
     });
   } catch (error) {
     console.error('Error actualizando perfil:', error);

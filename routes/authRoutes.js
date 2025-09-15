@@ -6,7 +6,8 @@ import {
   getMe,
   refreshToken,
   updateProfile,
-  changePassword
+  changePassword,
+  generateCSRFToken
 } from '../controllers/authControllers.js';
 import {
   validateRegister,
@@ -18,6 +19,9 @@ import { authMiddleware } from '../middleware/authMiddleware.js';
 import { validateCSRFToken } from '../middleware/csrfProtection.js';
 
 const router = express.Router();
+
+// Endpoint para obtener CSRF token (sin protección CSRF)
+router.get('/csrf', generateCSRFToken);
 
 // Rutas públicas con CSRF protection
 router.post('/register', validateCSRFToken, validateRegister, register);
