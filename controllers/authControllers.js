@@ -20,12 +20,12 @@ const generateRefreshToken = (userId) => {
   );
 };
 
-// Configurar cookies
+// Configurar cookies para cross-site requests
 const setCookies = (res, token, refreshToken) => {
-  console.log('🍪 [AUTH] Setting up cookies with options:', {
+  console.log('🍪 [AUTH] Setting up cookies with cross-site options:', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     path: '/',
     environment: process.env.NODE_ENV
   });
@@ -33,7 +33,7 @@ const setCookies = (res, token, refreshToken) => {
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     path: '/'
   };
 
@@ -229,11 +229,11 @@ export const logout = async (req, res) => {
       cookies: Object.keys(req.cookies || {})
     });
 
-    // Limpiar cookies
+    // Limpiar cookies con la misma configuración que se usó para crearlas
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/'
     };
 

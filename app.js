@@ -16,6 +16,7 @@ import {
   logSensitiveOperations,
   additionalSecurityHeaders
 } from './middleware/security.js';
+import { setCSRFToken } from './middleware/csrfProtection.js';
 
 dotenv.config();
 
@@ -48,11 +49,17 @@ app.use(additionalSecurityHeaders);
 app.use(sanitizeHeaders);
 app.use(logSensitiveOperations);
 
-// CORS configurado específicamente
+// CORS configurado para cross-site cookies
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+    'https://micro-greens-psi.vercel.app'
+  ],
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+  exposedHeaders: ['X-CSRF-Token']
 }));
 
 // Rate limiting
@@ -62,6 +69,9 @@ app.use(generalLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+
+// CSRF protection - establece token en GET requests
+app.use(setCSRFToken);
 
 // Logging
 if (process.env.NODE_ENV === 'development') {

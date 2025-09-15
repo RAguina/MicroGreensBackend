@@ -15,18 +15,19 @@ import {
   validateChangePassword
 } from '../middleware/authValidation.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
+import { validateCSRFToken } from '../middleware/csrfProtection.js';
 
 const router = express.Router();
 
-// Rutas públicas
-router.post('/register', validateRegister, register);
-router.post('/login', validateLogin, login);
-router.post('/logout', logout);
-router.post('/refresh', refreshToken);
+// Rutas públicas con CSRF protection
+router.post('/register', validateCSRFToken, validateRegister, register);
+router.post('/login', validateCSRFToken, validateLogin, login);
+router.post('/logout', validateCSRFToken, logout);
+router.post('/refresh', validateCSRFToken, refreshToken);
 
 // Rutas protegidas (requieren autenticación)
 router.get('/me', authMiddleware, getMe);
-router.put('/profile', authMiddleware, validateUpdateProfile, updateProfile);
-router.put('/password', authMiddleware, validateChangePassword, changePassword);
+router.put('/profile', validateCSRFToken, authMiddleware, validateUpdateProfile, updateProfile);
+router.put('/password', validateCSRFToken, authMiddleware, validateChangePassword, changePassword);
 
 export default router;
