@@ -45,32 +45,32 @@ export const validateCreatePlanting = [
     .withMessage('La fecha de plantación es requerida')
     .isISO8601()
     .withMessage('La fecha debe tener formato válido (YYYY-MM-DD)'),
-    
+
   body('expectedHarvest')
     .optional()
     .isISO8601()
     .withMessage('La fecha de cosecha debe tener formato válido (YYYY-MM-DD)'),
-    
+
   body('domeDate')
     .optional()
     .isISO8601()
     .withMessage('La fecha del domo debe tener formato válido (YYYY-MM-DD)'),
-    
+
   body('lightDate')
     .optional()
     .isISO8601()
     .withMessage('La fecha de luz debe tener formato válido (YYYY-MM-DD)'),
-    
+
   body('quantity')
     .optional()
     .isInt({ min: 1 })
     .withMessage('La cantidad debe ser un número entero mayor a 0'),
-    
+
   body('yield')
     .optional()
     .isFloat({ min: 0 })
     .withMessage('El rendimiento debe ser un número mayor o igual a 0'),
-    
+
   body('notes')
     .optional()
     .isLength({ max: 1000 })
@@ -88,7 +88,24 @@ export const validateCreatePlanting = [
     .isLength({ min: 1, max: 50 })
     .withMessage('El número de bandeja debe tener entre 1 y 50 caracteres')
     .trim(),
-    
+
+  // New growing condition fields
+  body('substrate')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('El sustrato no puede exceder los 100 caracteres')
+    .trim(),
+
+  body('irrigationMl')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Los mililitros de irrigación deben ser un número entero mayor o igual a 0'),
+
+  body('soakingHours')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Las horas de remojo deben ser un número entero mayor o igual a 0'),
+
   handleValidationErrors
 ];
 
@@ -103,43 +120,43 @@ export const validateUpdatePlanting = [
     .isLength({ min: 25, max: 25 })
     .matches(/^c[a-z0-9]{24}$/)
     .withMessage('plantTypeId debe ser un CUID válido'),
-    
+
   body('plantName')
     .optional()
     .isLength({ min: 1, max: 100 })
     .withMessage('El nombre debe tener entre 1 y 100 caracteres')
     .trim(),
-    
+
   body('datePlanted')
     .optional()
     .isISO8601()
     .withMessage('La fecha de plantación debe tener formato válido (YYYY-MM-DD)'),
-    
+
   body('expectedHarvest')
     .optional()
     .isISO8601()
     .withMessage('La fecha de cosecha debe tener formato válido (YYYY-MM-DD)'),
-    
+
   body('domeDate')
     .optional()
     .isISO8601()
     .withMessage('La fecha del domo debe tener formato válido (YYYY-MM-DD)'),
-    
+
   body('lightDate')
     .optional()
     .isISO8601()
     .withMessage('La fecha de luz debe tener formato válido (YYYY-MM-DD)'),
-    
+
   body('quantity')
     .optional()
     .isInt({ min: 1 })
     .withMessage('La cantidad debe ser un número entero mayor a 0'),
-    
+
   body('yield')
     .optional()
     .isFloat({ min: 0 })
     .withMessage('El rendimiento debe ser un número mayor o igual a 0'),
-    
+
   body('notes')
     .optional()
     .isLength({ max: 1000 })
@@ -157,7 +174,24 @@ export const validateUpdatePlanting = [
     .isLength({ min: 1, max: 50 })
     .withMessage('El número de bandeja debe tener entre 1 y 50 caracteres')
     .trim(),
-    
+
+  // New growing condition fields
+  body('substrate')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('El sustrato no puede exceder los 100 caracteres')
+    .trim(),
+
+  body('irrigationMl')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Los mililitros de irrigación deben ser un número entero mayor o igual a 0'),
+
+  body('soakingHours')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Las horas de remojo deben ser un número entero mayor o igual a 0'),
+
   handleValidationErrors
 ];
 

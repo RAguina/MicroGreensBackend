@@ -43,6 +43,11 @@ model Planting {
   // Notes and metadata
   notes           String?
   trayNumber      String?        // Physical location identifier
+
+  // Growing conditions (new fields)
+  substrate       String?        // Type of substrate used (zeolite, peat+perlite, compost, etc)
+  irrigationMl    Int?           // Milliliters of irrigation applied
+  soakingHours    Int?           // Hours of seed soaking before planting (null = no soaking)
   
   // Audit
   createdAt       DateTime       @default(now())

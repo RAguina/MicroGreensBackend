@@ -2,18 +2,22 @@ import { prisma } from '../lib/prisma.js';
 
 export const createPlanting = async (req, res) => {
   try {
-    const { 
-      plantName, 
+    const {
+      plantName,
       plantTypeId,
-      datePlanted, 
-      expectedHarvest, 
-      domeDate, 
-      lightDate, 
-      quantity, 
-      yield: plantYield, 
+      datePlanted,
+      expectedHarvest,
+      domeDate,
+      lightDate,
+      quantity,
+      yield: plantYield,
       notes,
       status,
-      trayNumber
+      trayNumber,
+      // New growing condition fields
+      substrate,
+      irrigationMl,
+      soakingHours
     } = req.body;
     
     // Obtener userId del token o usar usuario demo hardcodeado para desarrollo
@@ -61,6 +65,10 @@ export const createPlanting = async (req, res) => {
       notes: notes || null,
       status: status || 'PLANTED',
       trayNumber: trayNumber || null,
+      // New growing condition fields
+      substrate: substrate || null,
+      irrigationMl: irrigationMl ? parseInt(irrigationMl) : null,
+      soakingHours: soakingHours ? parseInt(soakingHours) : null,
     };
 
     // userId siempre existe ahora (autenticado o usuario por defecto)
@@ -228,18 +236,22 @@ export const getPlantingById = async (req, res) => {
 export const updatePlanting = async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
-      plantName, 
+    const {
+      plantName,
       plantTypeId,
-      datePlanted, 
-      expectedHarvest, 
-      domeDate, 
-      lightDate, 
-      quantity, 
-      yield: plantYield, 
+      datePlanted,
+      expectedHarvest,
+      domeDate,
+      lightDate,
+      quantity,
+      yield: plantYield,
       notes,
       status,
-      trayNumber
+      trayNumber,
+      // New growing condition fields
+      substrate,
+      irrigationMl,
+      soakingHours
     } = req.body;
     
     // Verificar si existe
@@ -279,6 +291,10 @@ export const updatePlanting = async (req, res) => {
         notes: notes !== undefined ? notes : undefined,
         status: status !== undefined ? status : undefined,
         trayNumber: trayNumber !== undefined ? trayNumber : undefined,
+        // New growing condition fields
+        substrate: substrate !== undefined ? substrate : undefined,
+        irrigationMl: irrigationMl !== undefined ? parseInt(irrigationMl) : undefined,
+        soakingHours: soakingHours !== undefined ? parseInt(soakingHours) : undefined,
       },
       include: {
         plantType: {
