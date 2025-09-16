@@ -30,9 +30,9 @@ export const validateCreatePlanting = [
 
   body('plantTypeId')
     .optional()
-    .isLength({ min: 20, max: 30 })
-    .matches(/^[a-z0-9]+$/)
-    .withMessage('plantTypeId debe ser un ID válido'),
+    .isLength({ min: 25, max: 25 })
+    .matches(/^c[a-z0-9]{24}$/)
+    .withMessage('plantTypeId debe ser un CUID válido'),
 
   body('plantName')
     .optional()
@@ -95,15 +95,14 @@ export const validateCreatePlanting = [
 // Validaciones para actualizar siembra
 export const validateUpdatePlanting = [
   param('id')
-    .isLength({ min: 20, max: 30 })
-    .matches(/^[a-z0-9]+$/)
-    .withMessage('El ID debe ser válido'),
+    .isUUID()
+    .withMessage('El ID debe ser un UUID válido'),
 
   body('plantTypeId')
     .optional()
-    .isLength({ min: 20, max: 30 })
-    .matches(/^[a-z0-9]+$/)
-    .withMessage('plantTypeId debe ser un ID válido'),
+    .isLength({ min: 25, max: 25 })
+    .matches(/^c[a-z0-9]{24}$/)
+    .withMessage('plantTypeId debe ser un CUID válido'),
     
   body('plantName')
     .optional()
@@ -165,9 +164,8 @@ export const validateUpdatePlanting = [
 // Validaciones para obtener/eliminar por ID
 export const validateIdParam = [
   param('id')
-    .isLength({ min: 20, max: 30 })
-    .matches(/^[a-z0-9]+$/)
-    .withMessage('El ID debe ser válido'),
+    .isUUID()
+    .withMessage('El ID debe ser un UUID válido'),
     
   handleValidationErrors
 ];
@@ -198,9 +196,9 @@ export const validateQueryParams = [
 
   query('plantTypeId')
     .optional()
-    .isLength({ min: 20, max: 30 })
-    .matches(/^[a-z0-9]+$/)
-    .withMessage('plantTypeId debe ser un ID válido'),
+    .isLength({ min: 25, max: 25 })
+    .matches(/^c[a-z0-9]{24}$/)
+    .withMessage('plantTypeId debe ser un CUID válido'),
     
   handleValidationErrors
 ];
