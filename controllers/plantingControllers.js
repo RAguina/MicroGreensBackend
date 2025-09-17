@@ -56,6 +56,7 @@ export const createPlanting = async (req, res) => {
       }
     }
     
+    // Base planting data (always safe)
     const plantingData = {
       plantName: plantName || null, // Legacy field
       plantTypeId: plantTypeId || null,
@@ -68,11 +69,12 @@ export const createPlanting = async (req, res) => {
       notes: notes || null,
       status: status || 'PLANTED',
       trayNumber: trayNumber || null,
-      // New growing condition fields
-      substrate: substrate || null,
-      irrigationMl: irrigationMl ? parseInt(irrigationMl) : null,
-      soakingHours: soakingHours ? parseInt(soakingHours) : null,
     };
+
+    // Add new growing condition fields only if they have values (migration-safe)
+    if (substrate) plantingData.substrate = substrate;
+    if (irrigationMl) plantingData.irrigationMl = parseInt(irrigationMl);
+    if (soakingHours) plantingData.soakingHours = parseInt(soakingHours);
 
     // userId siempre existe ahora (autenticado o usuario por defecto)
     plantingData.userId = userId;
@@ -280,25 +282,29 @@ export const updatePlanting = async (req, res) => {
       }
     }
     
+    // Base update data (always safe)
+    const updateData = {
+      plantName: plantName !== undefined ? plantName : undefined,
+      plantTypeId: plantTypeId !== undefined ? plantTypeId : undefined,
+      datePlanted: datePlanted ? new Date(datePlanted) : undefined,
+      expectedHarvest: expectedHarvest ? new Date(expectedHarvest) : undefined,
+      domeDate: domeDate ? new Date(domeDate) : undefined,
+      lightDate: lightDate ? new Date(lightDate) : undefined,
+      quantity: quantity !== undefined ? parseInt(quantity) : undefined,
+      yield: plantYield !== undefined ? parseFloat(plantYield) : undefined,
+      notes: notes !== undefined ? notes : undefined,
+      status: status !== undefined ? status : undefined,
+      trayNumber: trayNumber !== undefined ? trayNumber : undefined,
+    };
+
+    // Add new growing condition fields only if provided (migration-safe)
+    if (substrate !== undefined) updateData.substrate = substrate;
+    if (irrigationMl !== undefined) updateData.irrigationMl = parseInt(irrigationMl);
+    if (soakingHours !== undefined) updateData.soakingHours = parseInt(soakingHours);
+
     const updatedPlanting = await prisma.planting.update({
       where: { id },
-      data: {
-        plantName: plantName !== undefined ? plantName : undefined,
-        plantTypeId: plantTypeId !== undefined ? plantTypeId : undefined,
-        datePlanted: datePlanted ? new Date(datePlanted) : undefined,
-        expectedHarvest: expectedHarvest ? new Date(expectedHarvest) : undefined,
-        domeDate: domeDate ? new Date(domeDate) : undefined,
-        lightDate: lightDate ? new Date(lightDate) : undefined,
-        quantity: quantity !== undefined ? parseInt(quantity) : undefined,
-        yield: plantYield !== undefined ? parseFloat(plantYield) : undefined,
-        notes: notes !== undefined ? notes : undefined,
-        status: status !== undefined ? status : undefined,
-        trayNumber: trayNumber !== undefined ? trayNumber : undefined,
-        // New growing condition fields
-        substrate: substrate !== undefined ? substrate : undefined,
-        irrigationMl: irrigationMl !== undefined ? parseInt(irrigationMl) : undefined,
-        soakingHours: soakingHours !== undefined ? parseInt(soakingHours) : undefined,
-      },
+      data: updateData,
       include: {
         plantType: {
           select: {
