@@ -28,24 +28,27 @@ export const createPlanting = async (req, res) => {
       // Debe existir en la base de datos (crear con seed_demo_user.sql)
       userId = 'demo-user-12345678901234567890';
     }
-    
+
+    // Initialize expected harvest calculation
+    let calculatedExpectedHarvest = expectedHarvest;
+
     // Validate plantType if provided
     if (plantTypeId) {
       const plantType = await prisma.plantType.findUnique({
         where: { id: plantTypeId }
       });
-      
+
       if (!plantType || plantType.deletedAt) {
         return res.status(400).json({ error: 'Tipo de planta no válido' });
       }
-      
+
       // Auto-calculate expectedHarvest if not provided
-      if (!expectedHarvest && plantType.daysToHarvest) {
+      if (!calculatedExpectedHarvest && plantType.daysToHarvest) {
         try {
           const plantedDate = new Date(datePlanted);
           const expectedDate = new Date(plantedDate);
           expectedDate.setDate(plantedDate.getDate() + plantType.daysToHarvest);
-          expectedHarvest = expectedDate.toISOString().split('T')[0]; // Solo fecha, no hora
+          calculatedExpectedHarvest = expectedDate.toISOString().split('T')[0]; // Solo fecha, no hora
         } catch (error) {
           console.error('Error calculating expectedHarvest:', error);
           // Continue without auto-calculation
@@ -57,7 +60,7 @@ export const createPlanting = async (req, res) => {
       plantName: plantName || null, // Legacy field
       plantTypeId: plantTypeId || null,
       datePlanted: new Date(datePlanted),
-      expectedHarvest: expectedHarvest ? new Date(expectedHarvest) : null,
+      expectedHarvest: calculatedExpectedHarvest ? new Date(calculatedExpectedHarvest) : null,
       domeDate: domeDate ? new Date(domeDate) : null,
       lightDate: lightDate ? new Date(lightDate) : null,
       quantity: quantity ? parseInt(quantity) : null,
